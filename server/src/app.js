@@ -23,7 +23,7 @@ try {
     const decodedToken = await admin.auth().verifyIdToken(token);
     const uid = decodedToken.uid;
 
-    //
+    //Cheching for user in personal database
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
     
