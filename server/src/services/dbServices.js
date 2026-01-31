@@ -56,4 +56,36 @@ async function addUser(document) {
     }
 }
 
-module.exports = {fetchUser, addUser}
+async function updateUser(document) {
+    try {
+        //connecting to database
+        await client.connect();
+        console.log("Connection Opened");
+        
+        const db = client.db(dbName);
+        const collection = db.collection("users");
+
+        const allowed_feilds = ["username", "phone_number", "role"];
+
+        const safeDoc = Object.fromEntries(
+            Object.entries(document).filter(([key]) => allowed_feilds.includes(key))
+        )
+
+        const filter = {email:document.email};
+        const updateValue = {$set:safeDoc};
+        
+        const result = await collection.updateOne(filter,updateValue);
+        return result;
+    } catch (error) {
+        console.log("Error:",error);
+    }finally{
+        //closing the connection
+        await client.close();
+        console.log("Connection Closed");
+    }
+}
+
+async function deleteUser(uid) {
+    
+}
+module.exports = {fetchUser, addUser, updateUser}
