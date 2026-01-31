@@ -9,99 +9,93 @@ dotenv.config();
 const uri = process.env.MONGO_URI; 
 const client = new MongoClient(uri);
 const dbName = process.env.MONGO_DB;
+let db;
+
+//Connecting to the db
+async function connectDB() {
+    if (!db) {
+        await client.connect();
+        console.log("MongoDB connected");
+        db = client.db(dbName);
+    }
+    return db;
+}
+
+function getDB() {
+    if (!db) {
+        throw new Error("Database not initialized. Call connectDB first.");
+    }
+    return db;
+}
+
+async function closeDB() {
+    if (client) {
+        await client.close();
+        console.log("MongoDB connection closed");
+    }
+}
 
 //fetch user function
 async function fetchUser(email) {
-
     try {
-        //connecting to database
-        await client.connect();
-        console.log("Connection Opened");
-        
-        const db = client.db(dbName);
+        db = getDB();
         const collection = db.collection("users");
 
-        //finding user by uid
-        const result = await collection.findOne({email:email});
+        // Finding user by email
+        const result = collection.findOne({ email: email });
         return result;
     } catch (error) {
-        console.log("Error fetching user:",error);
-    } finally {
-        //closing the connection
-        await client.close();
-        console.log("Connection Closed");
-        
+        console.log("Error fetching user:", error);
     }
 }
 
 //add user function
 async function addUser(document) {
     try {
-        //connecting to database
-        await client.connect();
-        console.log("Connection Opened");
-        
-        const db = client.db(dbName);
+        const db = getDB();
         const collection = db.collection("users");
 
         const result = await collection.insertOne(document);
-        console.log("User Inserted Successfully",result);
+        console.log("User Inserted Successfully", result);
         return result;
     } catch (error) {
-        console.log("Error adding user:",error);
-    } finally {
-        //closing the connection
-        await client.close();
-        console.log("Connection Closed");
+        console.log("Error adding user:", error);
     }
 }
 
+// Update user function
 async function updateUser(document) {
     try {
-        //connecting to database
-        await client.connect();
-        console.log("Connection Opened");
-        
-        const db = client.db(dbName);
+        const db = getDB();
         const collection = db.collection("users");
 
-        const allowed_feilds = ["username", "phone_number", "role"];
+        const allowed_fields = ["username", "phone_number", "role"];
 
         const safeDoc = Object.fromEntries(
-            Object.entries(document).filter(([key]) => allowed_feilds.includes(key))
-        )
+            Object.entries(document).filter(([key]) => allowed_fields.includes(key))
+        );
 
-        const filter = {email:document.email};
-        const updateValue = {$set:safeDoc};
-        
-        const result = await collection.updateOne(filter,updateValue);
+        const filter = { email: document.email };
+        const updateValue = { $set: safeDoc };
+
+        const result = await collection.updateOne(filter, updateValue);
         return result;
     } catch (error) {
-        console.log("Error updating user:",error);
-    }finally{
-        //closing the connection
-        await client.close();
-        console.log("Connection Closed");
+        console.log("Error updating user:", error);
     }
 }
 
+// Delete user function
 async function deleteUser(email) {
-   try {
-        //connecting to database
-        await client.connect();
-        console.log("Connection Opened");
-        
-        const db = client.db(dbName);
+    try {
+        const db = getDB();
         const collection = db.collection("users");
 
-        const deleteUser = await collection.deleteOne({email:email});
-        return deleteUser
+        const deleteUser = await collection.deleteOne({ email: email });
+        return deleteUser;
     } catch (error) {
-        console.log("Error Deleting user:",error);
-    }finally{
-        //closing the connection
-        await client.close();
-        console.log("Connection Closed");
+        console.log("Error deleting user:", error);
     }
 }
-module.exports = {fetchUser, addUser, updateUser}
+
+module.exports = { fetchUser, addUser, updateUser, deleteUser, connectDB,closeDB };
