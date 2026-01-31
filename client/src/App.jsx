@@ -6,6 +6,7 @@ import { ThemeProvider } from "./context/ThemeContext.jsx";
 import Login from "./pages/login.jsx"
 import SignUp from "./pages/signup.jsx";
 import Error404 from "./pages/error.jsx";
+import Home from "./pages/home.jsx";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/home" element={<Home />} />
           <Route path="*" element={<Error404 />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
