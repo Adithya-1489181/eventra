@@ -6,7 +6,7 @@ import ThemeToggle from "../components/ThemeToggle.jsx";
 
 const SignUp = () => {
     const navigate = useNavigate();
-    
+
     //Form field value controllers
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -48,7 +48,7 @@ const SignUp = () => {
         }
     }
 
-    return ( 
+    return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-900 dark:to-gray-800">
             <ThemeToggle />
             <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
@@ -56,7 +56,7 @@ const SignUp = () => {
                     <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Create Account</h1>
                     <p className="text-gray-500 dark:text-gray-400 mt-2">Sign up to get started with Eventra</p>
                 </div>
-                
+
                 <form onSubmit={handleSignup} className="space-y-5">
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -89,7 +89,7 @@ const SignUp = () => {
                             required
                         />
                     </div>
-                    
+
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Password
@@ -162,7 +162,7 @@ const SignUp = () => {
                 <div className="mt-6 text-center">
                     <p className="text-gray-600 dark:text-gray-400">
                         Already have an account?{" "}
-                        <button 
+                        <button
                             onClick={() => navigate("/login")}
                             className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
                         >
@@ -174,5 +174,5 @@ const SignUp = () => {
         </div>
     );
 }
- 
+
 export default SignUp;
