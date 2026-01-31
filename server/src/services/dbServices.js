@@ -11,7 +11,7 @@ const client = new MongoClient(uri);
 const dbName = process.env.MONGO_DB;
 
 //fetch user function
-async function fetchUser(uid) {
+async function fetchUser(email) {
 
     try {
         //connecting to database
@@ -22,10 +22,10 @@ async function fetchUser(uid) {
         const collection = db.collection("users");
 
         //finding user by uid
-        const result = await collection.findOne({uid:uid});
+        const result = await collection.findOne({email:email});
         return result;
     } catch (error) {
-        console.log("Error:",error);
+        console.log("Error fetching user:",error);
     } finally {
         //closing the connection
         await client.close();
@@ -48,7 +48,7 @@ async function addUser(document) {
         console.log("User Inserted Successfully",result);
         return result;
     } catch (error) {
-        console.log("Error:",error);
+        console.log("Error adding user:",error);
     } finally {
         //closing the connection
         await client.close();
@@ -77,7 +77,7 @@ async function updateUser(document) {
         const result = await collection.updateOne(filter,updateValue);
         return result;
     } catch (error) {
-        console.log("Error:",error);
+        console.log("Error updating user:",error);
     }finally{
         //closing the connection
         await client.close();
@@ -85,7 +85,23 @@ async function updateUser(document) {
     }
 }
 
-async function deleteUser(uid) {
-    
+async function deleteUser(email) {
+   try {
+        //connecting to database
+        await client.connect();
+        console.log("Connection Opened");
+        
+        const db = client.db(dbName);
+        const collection = db.collection("users");
+
+        const deleteUser = await collection.deleteOne({email:email});
+        return deleteUser
+    } catch (error) {
+        console.log("Error Deleting user:",error);
+    }finally{
+        //closing the connection
+        await client.close();
+        console.log("Connection Closed");
+    }
 }
 module.exports = {fetchUser, addUser, updateUser}
