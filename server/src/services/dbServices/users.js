@@ -8,6 +8,7 @@ async function fetchUser(email) {
 
         // Finding user by email
         const result = collection.findOne({ email: email });
+        console.log(result)
         return result;
     } catch (error) {
         console.log("Error fetching user:", error);
@@ -29,7 +30,7 @@ async function addUser(document) {
 }
 
 // Update user function
-async function updateUser(document) {
+async function updateUser(userId, document) {
     try {
         const db = getDB();
         const collection = db.collection("users");
@@ -40,10 +41,11 @@ async function updateUser(document) {
             Object.entries(document).filter(([key]) => allowed_fields.includes(key))
         );
 
-        const filter = { email: document.email };
+        const filter = { uid: userId };
         const updateValue = { $set: safeDoc };
 
         const result = await collection.updateOne(filter, updateValue);
+        console.log(result)
         return result;
     } catch (error) {
         console.log("Error updating user:", error);
@@ -51,13 +53,14 @@ async function updateUser(document) {
 }
 
 // Delete user function
-async function deleteUser(email) {
+async function deleteUser(uid) {
     try {
         const db = getDB();
         const collection = db.collection("users");
 
-        const deleteUser = await collection.deleteOne({ email: email });
-        return deleteUser;
+        const deletedUser = await collection.deleteOne({ uid: uid });
+        console.log(deletedUser);
+        return deletedUser;
     } catch (error) {
         console.log("Error deleting user:", error);
     }
