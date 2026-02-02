@@ -8,7 +8,7 @@ async function fetchUser(email) {
 
         // Finding user by email
         const result = collection.findOne({ email: email });
-        console.log(result)
+        console.log(result);
         return result;
     } catch (error) {
         console.log("Error fetching user:", error);
