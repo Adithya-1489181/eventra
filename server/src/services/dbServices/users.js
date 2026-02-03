@@ -1,13 +1,13 @@
 const { getDB } = require("./dbServices.js")
 
 //fetch user function
-async function fetchUser(email) {
+async function fetchUser(uid) {
     try {
         db = getDB();
         const collection = db.collection("users");
 
         // Finding user by email
-        const result = collection.findOne({ email: email });
+        const result = collection.findOne({ uid: uid });
         console.log(result);
         return result;
     } catch (error) {
