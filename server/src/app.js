@@ -10,12 +10,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// health check
-app.get("/login", (req, res) => {
-  console.log("Working...");
-  res.json({ status: "Eventra backend running" });
-});
-
 app.post("/api/auth/login",async(req, res)=>{
 try {
         const userCredentials = req.body;
