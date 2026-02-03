@@ -35,7 +35,7 @@ async function updateUser(userId, document) {
         const db = getDB();
         const collection = db.collection("users");
 
-        const allowed_fields = ["username", "phone_number", "role"];
+        const allowed_fields = ["username", "phone_number", "role", "email"];
 
         const safeDoc = Object.fromEntries(
             Object.entries(document).filter(([key]) => allowed_fields.includes(key))
