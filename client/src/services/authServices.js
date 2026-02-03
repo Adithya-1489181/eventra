@@ -17,7 +17,7 @@ const auth = getAuth(app);
 export async function loginService({ email, password }) {
     try {
         const userCredentials = await signInWithEmailAndPassword(auth, email, password);
-        //const response = await axios.post("/api/auth/login",{})
+        const response = await axios.post("/api/auth/login",{});
         return userCredentials.user;
     } catch (error) {
         throw new Error("Invalid Email or Password. Try Again");
@@ -27,7 +27,7 @@ export async function loginService({ email, password }) {
 export async function signupService({ email, password }) {
     try {
         const userCredentials = await createUserWithEmailAndPassword(auth, email, password);
-        //const response = await axios.post("/api/auth/signup",{})
+        const response = await axios.post("/api/auth/signup",{})
         return userCredentials.user;
     } catch (error) {
         throw new Error("Failed to create account. Please try again.");
