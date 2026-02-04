@@ -7,7 +7,10 @@ async function createEvent(eventDetails) {
 
         //Generate Event Id and attach it to eventDetails
         const lastEvent = await collection.findOne({},{sort: {event_id: -1}});
-        const currentEventId = lastEvent.event_id+1;
+        let currentEventId = 1000;
+        if (lastEvent) {
+            currentEventId = lastEvent.event_id+1;
+        }
         eventDetails.event_id = currentEventId;
 
         const result = await collection.insertOne(eventDetails);
@@ -44,19 +47,88 @@ async function fetchOneEvent(eventId) {
 }
 
 async function fetchMultipleEvent(filter) {
-    //How to fetch multiple events with and without filters
     try {
-        db = getDB();
+        const db = getDB();
         const collection = db.collection("events");
-        const allEvents = [];
-        if(filter){
+        
+        // Check if filter has any keys
+        const hasFilter = filter && Object.keys(filter).length > 0;
+        
+        if (hasFilter) {
+            // Generic filter parser with type conversion
+            Object.keys(filter).forEach(key => {
+                const value = filter[key];
+                
+                // Skip if already correct type
+                if (typeof value !== 'string') return;
+                
+                // Convert boolean strings
+                if (value === 'true') {
+                    filter[key] = true;
+                } else if (value === 'false') {
+                    filter[key] = false;
+                }
+                // Convert numeric strings (integers and decimals)
+                else if (!isNaN(value) && value.trim() !== '') {
+                    filter[key] = value.includes('.') ? parseFloat(value) : parseInt(value);
+                }
+                // Convert ISO date strings (YYYY-MM-DD format)
+                else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        filter[key] = value; // Keep as string for MongoDB date comparison
+                    }
+                }
+                // Convert time strings (HH:MM format) - keep as string
+                else if (/^\d{2}:\d{2}$/.test(value)) {
+                    filter[key] = value;
+                }
+                // Handle nested object queries (e.g., location.type=venue)
+                // MongoDB handles dot notation automatically
+            });
+            
+            // Handle range operators for dates and numbers
+            // Example: ?capacity_gte=1000&capacity_lte=5000
+            const rangeOperators = { 
+                '_gte': '$gte', 
+                '_lte': '$lte', 
+                '_gt': '$gt', 
+                '_lt': '$lt',
+                '_ne': '$ne'
+            };
+            
+            Object.keys(filter).forEach(key => {
+                Object.entries(rangeOperators).forEach(([suffix, operator]) => {
+                    if (key.endsWith(suffix)) {
+                        const fieldName = key.replace(suffix, '');
+                        const value = filter[key];
+                        
+                        // Initialize as object if not exists
+                        if (!filter[fieldName] || typeof filter[fieldName] !== 'object' || Array.isArray(filter[fieldName])) {
+                            filter[fieldName] = {};
+                        }
+                        
+                        // Add operator
+                        filter[fieldName][operator] = value;
+                        delete filter[key];
+                    }
+                });
+            });
+        }
+        
+        let allEvents = [];
+        if (!hasFilter) {
             allEvents = await collection.find({}).toArray();
         } else {
             allEvents = await collection.find(filter).toArray();
         }
+        
+        console.log("Filter used:", JSON.stringify(filter, null, 2));
+        console.log("Events found:", allEvents.length);
         return allEvents;
     } catch (error) {
         console.log("Error fetching events:", error);
+        throw error;
     }
 }
 
