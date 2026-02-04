@@ -3,16 +3,17 @@ const express = require("express");
 const cors = require("cors");
 
 //service imports
-const {fetchUser, addUser, updateUser, deleteUser} = require("./services/dbServices/users.js");
+const {fetchUser, addUser, updateUser, deleteUser, promoteUser} = require("./services/dbServices/users.js");
 const {createEvent, fetchOneEvent, fetchMultipleEvent, updateEvent, deleteEvent} = require("./services/dbServices/events.js");
 const { generateTicket } = require("./services/ticket/ticket-base.js");
 const { verifyToken } = require("./services/firebase/authorisation.js");
 const {sendTicket} = require('./services/ticket/mail-ticket')
+const {fetchRegistration, addRegistration, deleteRegistration} = require('./services/dbServices/tickets.js')
+
 //initialisation of modules
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 
 //api's for development/testing purposes only
 app.post("/test",async (req,res) => {
@@ -69,7 +70,7 @@ app.delete("/test",async (req,res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-})
+});
 
 //Public Endpoints
 app.post("/api/auth/login",async(req, res)=>{
@@ -154,9 +155,12 @@ app.delete("/api/profile",verifyToken,async (req,res) => {
 
 app.get("/api/profile/tickets",verifyToken,async (req,res) => {
     try {
-        //Show all tickets of user.
+        const userId = req.user.uid;
+
+        const result = await fetchRegistration(userId, null);
+        res.json({message:"All tickets fetched",data: result})
     } catch (error) {
-        
+        res.status(500).json({error: error.message});
     }
 })
 
@@ -203,7 +207,7 @@ app.patch("/api/events/:eventId", verifyToken, async (req,res) => {
     }
 });
 
-app.delete("/api/events/:eventId",async (req,res) => {
+app.delete("/api/events/:eventId", verifyToken, async (req,res) => {
     try {
         const eventId = req.params.eventId;
         const userId = req.user.uid;
@@ -225,9 +229,8 @@ app.delete("/api/events/:eventId",async (req,res) => {
 });
 
 
-//Authenticated Ticket Related Endpoints
-
-app.post("/api/events/:eventId/register",async (req,res) => {
+//Authenticated users event related endpoints
+app.post("/api/events/:eventId/register", verifyToken, async (req,res) => {
     try {
 
     } catch (error) {
@@ -235,7 +238,7 @@ app.post("/api/events/:eventId/register",async (req,res) => {
     }
 });
 
-app.post("/:eventId/ticket",async (req,res) => {
+app.post("/:eventId/ticket",verifyToken, async (req,res) => {
  try {
         const eventId = req.params.eventId;
         const userId = req.user.uid;
@@ -263,5 +266,10 @@ app.post("/:eventId/ticket",async (req,res) => {
         console.error("Error:", error);
         res.status(500).json({ status: "error", message: error.message });
     }
+});
+
+//special admin endpoints
+app.post("/api/admin",verifyToken,async (req,res) => {
+    
 });
 module.exports = app;
