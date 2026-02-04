@@ -97,4 +97,4 @@ async function deleteUser(uid) {
 }
 
 
-module.exports = { fetchUser, addUser, updateUser, deleteUser, promoteUser};
+module.exports = { fetchUser, addUser, updateUser, deleteUser, promoteUser, fetchAllUser};
