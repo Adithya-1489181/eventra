@@ -55,40 +55,27 @@ async function fetchMultipleEvent(filter) {
         const hasFilter = filter && Object.keys(filter).length > 0;
         
         if (hasFilter) {
-            // Generic filter parser with type conversion
             Object.keys(filter).forEach(key => {
                 const value = filter[key];
                 
-                // Skip if already correct type
                 if (typeof value !== 'string') return;
                 
-                // Convert boolean strings
                 if (value === 'true') {
                     filter[key] = true;
                 } else if (value === 'false') {
                     filter[key] = false;
-                }
-                // Convert numeric strings (integers and decimals)
-                else if (!isNaN(value) && value.trim() !== '') {
+                } else if (!isNaN(value) && value.trim() !== '') {
                     filter[key] = value.includes('.') ? parseFloat(value) : parseInt(value);
-                }
-                // Convert ISO date strings (YYYY-MM-DD format)
-                else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
                     const date = new Date(value);
                     if (!isNaN(date.getTime())) {
-                        filter[key] = value; // Keep as string for MongoDB date comparison
+                        filter[key] = value; 
                     }
-                }
-                // Convert time strings (HH:MM format) - keep as string
-                else if (/^\d{2}:\d{2}$/.test(value)) {
+                } else if (/^\d{2}:\d{2}$/.test(value)) {
                     filter[key] = value;
                 }
-                // Handle nested object queries (e.g., location.type=venue)
-                // MongoDB handles dot notation automatically
             });
-            
-            // Handle range operators for dates and numbers
-            // Example: ?capacity_gte=1000&capacity_lte=5000
+
             const rangeOperators = { 
                 '_gte': '$gte', 
                 '_lte': '$lte', 
