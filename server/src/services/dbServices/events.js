@@ -90,12 +90,10 @@ async function fetchMultipleEvent(filter) {
                         const fieldName = key.replace(suffix, '');
                         const value = filter[key];
                         
-                        // Initialize as object if not exists
                         if (!filter[fieldName] || typeof filter[fieldName] !== 'object' || Array.isArray(filter[fieldName])) {
                             filter[fieldName] = {};
                         }
                         
-                        // Add operator
                         filter[fieldName][operator] = value;
                         delete filter[key];
                     }
