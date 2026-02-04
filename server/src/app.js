@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 
 //service imports
-const {fetchUser, addUser, updateUser, deleteUser, promoteUser} = require("./services/dbServices/users.js");
+const {fetchUser, addUser, updateUser, deleteUser, promoteUser, fetchAllUser} = require("./services/dbServices/users.js");
 const {createEvent, fetchOneEvent, fetchMultipleEvent, updateEvent, deleteEvent} = require("./services/dbServices/events.js");
 const { generateTicket } = require("./services/ticket/ticket-base.js");
 const { verifyToken } = require("./services/firebase/authorisation.js");
@@ -191,9 +191,10 @@ app.patch("/api/events/:eventId", verifyToken, async (req,res) => {
         const eventDetails = req.body;
         const userId = req.user.uid;
 
+        const user = await fetchUser(userId);
         const existingEvent = await fetchOneEvent(eventId);
 
-        if(existingEvent.createdBy!==userId){
+        if(existingEvent.createdBy!==userId && user.role !== "admin"){
             return res.status(403).json({ 
                 error: "Forbidden", 
                 message: "You can only update your own events" 
@@ -214,7 +215,7 @@ app.delete("/api/events/:eventId", verifyToken, async (req,res) => {
         
         const existingEvent = await fetchOneEvent(eventId);
         
-        if (existingEvent.createdBy !== userId) {
+        if (existingEvent.createdBy !== userId && user.role !== "admin") {
             return res.status(403).json({ 
                 error: "Forbidden", 
                 message: "You can only delete your own events" 
@@ -269,7 +270,43 @@ app.post("/:eventId/ticket",verifyToken, async (req,res) => {
 });
 
 //special admin endpoints
-app.post("/api/admin",verifyToken,async (req,res) => {
-    
+app.post("/api/admin/promoteUser",verifyToken,async (req,res) => {
+    try {
+        const userId = req.user.uid;
+        const personId = req.body.uid;
+        const personRole = req.body.role;
+        
+        const user = await fetchUser(userId);
+        if (user.role!=='admin') {
+            return res.status(403).json({ 
+                error: "Forbidden", 
+                message: "You can only delete your own events" 
+            });
+        }
+
+        result = await promoteUser(personId,personRole);
+        return res.json({message:"User Promoted to expected role", data:result});
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
+
+app.get("/api/admin/allUsers",verifyToken,async (req,res) => {
+        
+    try {
+        const userId = req.user.uid;
+        const user = await fetchUser(userId);
+        if (user.role!=='admin') {
+            return res.status(403).json({ 
+                error: "Forbidden", 
+                message: "You can only delete your own events" 
+            });
+        }
+
+        const usersList = await fetchAllUser();
+        return res.json({message:"User Promoted to expected role", data: usersList});
+    } catch (error) {
+        res.status(500).json({error: error.message});
+    }
+})
 module.exports = app;
