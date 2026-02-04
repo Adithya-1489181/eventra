@@ -7,7 +7,21 @@ async function fetchUser(uid) {
         const collection = db.collection("users");
 
         // Finding user by email
-        const result = collection.findOne({ uid: uid });
+        const result = await collection.findOne({ uid: uid });
+        console.log(result);
+        return result;
+    } catch (error) {
+        console.log("Error fetching user:", error);
+    }
+}
+
+async function fetchAllUser() {
+    try {
+        db = getDB();
+        const collection = db.collection("users");
+
+        // Finding user by email
+        const result = await collection.find({}).toArray();
         console.log(result);
         return result;
     } catch (error) {
