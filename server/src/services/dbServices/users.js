@@ -35,7 +35,7 @@ async function updateUser(userId, document) {
         const db = getDB();
         const collection = db.collection("users");
 
-        const allowed_fields = ["username", "phone_number", "role", "email"];
+        const allowed_fields = ["username", "phone_number", "email"];
 
         const safeDoc = Object.fromEntries(
             Object.entries(document).filter(([key]) => allowed_fields.includes(key))
@@ -49,6 +49,22 @@ async function updateUser(userId, document) {
         return result;
     } catch (error) {
         console.log("Error updating user:", error);
+    }
+}
+
+async function promoteUser(userId, role) {
+    try {
+        const db = getDB();
+        const collection = db.collection("users");
+
+        const filter = { uid: userId };
+        const updateValue = { role: role };
+
+        const result = await collection.updateOne(filter, updateValue);
+        console.log(result)
+        return result;
+    } catch (error) {
+        console.log("Error promoting user:", error);
     }
 }
 
@@ -67,4 +83,4 @@ async function deleteUser(uid) {
 }
 
 
-module.exports = { fetchUser, addUser, updateUser, deleteUser};
+module.exports = { fetchUser, addUser, updateUser, deleteUser, promoteUser};

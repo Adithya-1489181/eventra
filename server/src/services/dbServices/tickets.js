@@ -4,8 +4,12 @@ async function fetchRegistration(userId, eventId) {
     try {
         db = getDB();
         const collection = db.collection("registrations");
-
-        const result = collection.findOne({ uid: userId, event_id: eventId });
+        let result;
+        if (!eventId) {  
+            result = collection.findOne({ uid: userId });
+        }else {
+            result = collection.findOne({ uid: userId, event_id: eventId });
+        }
         console.log(result);
         return result;
     } catch (error) {
