@@ -1,37 +1,81 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "./context/ThemeContext.jsx";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
-//import pages, layouts, global providers, auth gards etc.
-
-import Login from "./pages/login.jsx"
-import SignUp from "./pages/signup.jsx";
-import Error404 from "./pages/error.jsx";
-import Home from "./pages/home.jsx";
-import Dashboard from "./pages/dashboard.jsx";
-import Settings from "./pages/settings.jsx";
-import CreateEvent from "./pages/create_event.jsx";
-import EditEvent from "./pages/edit_event.jsx";
-import EventDetails from "./pages/event_details.jsx";
+// Pages
+import Home from './pages/Home';
+import BrowseEvents from './pages/BrowseEvents';
+import EventDetails from './pages/EventDetails';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import CreateEvent from './pages/CreateEvent';
+import EditEvent from './pages/EditEvent';
+import AdminPanel from './pages/AdminPanel';
 
 function App() {
   return (
-    <ThemeProvider>
+    <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/events" element={<BrowseEvents />} />
+          <Route path="/events/:eventId" element={<EventDetails />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/events/create" element={<CreateEvent />} />
-          <Route path="/events/edit/:id" element={<EditEvent />} />
-          <Route path="/events/:id" element={<EventDetails />} />
-          <Route path="*" element={<Error404 />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-event"
+            element={
+              <ProtectedRoute>
+                <CreateEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/events/:eventId/edit"
+            element={
+              <ProtectedRoute>
+                <EditEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </ThemeProvider>
+    </AuthProvider>
   );
 }
 
 export default App;
+
