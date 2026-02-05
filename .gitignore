@@ -25,3 +25,4 @@ dist-ssr
 
 #Special
 .env
+firebase_admin.json
