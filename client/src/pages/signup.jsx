@@ -1,178 +1,213 @@
-import { useState } from 'react';
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { signupService } from "../services/authServices.js";
-import ThemeToggle from "../components/ThemeToggle.jsx";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiMail, FiLock, FiUser } from 'react-icons/fi';
+import AuthLayout from '../layouts/AuthLayout';
+import { Button, Input, Alert, Card, Select } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import apiClient from '../utils/apiClient';
 
-const SignUp = () => {
-    const navigate = useNavigate();
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'user',
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState(null);
 
-    //Form field value controllers
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
+  const { signup } = useAuth();
+  const navigate = useNavigate();
 
-    //UI State manipulators
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const roleOptions = [
+    { value: 'user', label: 'Attendee' },
+    { value: 'organiser', label: 'Event Organizer' },
+  ];
 
-    //Call to the service provider
-    const handleSignup = async (e) => {
-        e.preventDefault();
-        setError(null);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
 
-        // Validate passwords match
-        if (password !== confirmPassword) {
-            setError("Passwords do not match");
-            return;
-        }
+  const validate = () => {
+    const newErrors = {};
 
-        // Validate password length
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const res = await signupService({ email, password });
-            console.log("User Registered Successfully");
-            navigate("/login");
-        } catch (error) {
-            setError(error.message || "Failed to create account. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+    if (!formData.name) {
+      newErrors.name = 'Name is required';
     }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-100 dark:from-gray-900 dark:to-gray-800">
-            <ThemeToggle />
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Create Account</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2">Sign up to get started with Eventra</p>
-                </div>
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
 
-                <form onSubmit={handleSignup} className="space-y-5">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Full Name
-                        </label>
-                        <input
-                            id="name"
-                            type="text"
-                            placeholder="Enter your full name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                            autoComplete="name"
-                            required
-                        />
-                    </div>
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
 
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Email Address
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                            autoComplete="email"
-                            required
-                        />
-                    </div>
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
 
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Create a password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent outline-none transition pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                                autoComplete="new-password"
-                                required
-                            />
-                            <button
-                                type="button"
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
-                            </button>
-                        </div>
-                    </div>
+    return newErrors;
+  };
 
-                    <div>
-                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Confirm Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                id="confirmPassword"
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="Confirm your password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:border-transparent outline-none transition pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                                autoComplete="new-password"
-                                required
-                            />
-                            <button
-                                type="button"
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            >
-                                {showConfirmPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
-                            </button>
-                        </div>
-                    </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const newErrors = validate();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
-                    {error && (
-                        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                            {error}
-                        </div>
-                    )}
+    setLoading(true);
+    setAlert(null);
 
-                    <button
-                        type="submit"
-                        className="w-full bg-purple-600 dark:bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition font-medium flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            "Create Account"
-                        )}
-                    </button>
-                </form>
+    try {
+      const userCredential = await signup(formData.email, formData.password);
+      
+      await apiClient.post('/api/signup', {
+        uid: userCredential.user.uid,
+        email: formData.email,
+        name: formData.name,
+        role: formData.role,
+      });
 
-                <div className="mt-6 text-center">
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Already have an account?{" "}
-                        <button
-                            onClick={() => navigate("/login")}
-                            className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
-                        >
-                            Sign in
-                        </button>
-                    </p>
-                </div>
-            </div>
+      setAlert({ type: 'success', message: 'Account created successfully!' });
+      setTimeout(() => navigate('/dashboard'), 1000);
+    } catch (error) {
+      setAlert({ 
+        type: 'error', 
+        message: error.response?.data?.error || error.message || 'Failed to create account. Please try again.' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthLayout>
+      <Card>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
+          <p className="mt-2 text-gray-600">Join Eventra today</p>
         </div>
-    );
-}
 
-export default SignUp;
+        {alert && (
+          <Alert
+            type={alert.type}
+            message={alert.message}
+            onClose={() => setAlert(null)}
+            className="mb-4"
+          />
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative">
+            <FiUser className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Full Name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              error={errors.name}
+              placeholder="John Doe"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <div className="relative">
+            <FiMail className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              placeholder="you@example.com"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <Select
+            label="I want to"
+            name="role"
+            options={roleOptions}
+            value={formData.role}
+            onChange={handleChange}
+            fullWidth
+          />
+
+          <div className="relative">
+            <FiLock className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+              placeholder="••••••••"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <div className="relative">
+            <FiLock className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Confirm Password"
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
+              placeholder="••••••••"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={loading}
+          >
+            {loading ? 'Creating account...' : 'Create Account'}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </Card>
+    </AuthLayout>
+  );
+};
+
+export default Signup;

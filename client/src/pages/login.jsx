@@ -1,128 +1,167 @@
-import { useState } from "react";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { loginService } from "../services/authServices.js";
-import ThemeToggle from "../components/ThemeToggle.jsx";
-
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiMail, FiLock } from 'react-icons/fi';
+import AuthLayout from '../layouts/AuthLayout';
+import { Button, Input, Alert, Card } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import apiClient from '../utils/apiClient';
 
 const Login = () => {
-    const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState(null);
 
-    //Form field value controllers
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-    //UI State manipulators
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [showPassword, setShowPassword] = useState(false);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
 
-    //Call to the service provider
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 10000)); // 10 seconds
-        try {
-            const res = await loginService({ email, password });
-            console.log("User Logged In");
-        } catch (error) {
-            setError("Invalid Email or Password");
-        } finally {
-            setLoading(false);
-        }
+  const validate = () => {
+    const newErrors = {};
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
     }
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-            <ThemeToggle />
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Welcome Back</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to continue to Eventra</p>
-                </div>
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
 
-                <form onSubmit={handleLogin} className="space-y-5">
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Email Address
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                            autoComplete="email"
-                            required
-                        />
-                    </div>
+    return newErrors;
+  };
 
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Enter your password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent outline-none transition pr-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                                autoComplete="current-password"
-                                required
-                            />
-                            <button
-                                type="button"
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                                onClick={() => setShowPassword(!showPassword)}
-                            >
-                                {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
-                            </button>
-                        </div>
-                    </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const newErrors = validate();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
-                    <div className="flex justify-end">
-                        <a href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
-                            Forgot Password?
-                        </a>
-                    </div>
+    setLoading(true);
+    setAlert(null);
 
-                    {error && (
-                        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
-                            {error}
-                        </div>
-                    )}
+    try {
+      await login(formData.email, formData.password);
+      await apiClient.post('/api/auth/login', { email: formData.email });
+      
+      setAlert({ type: 'success', message: 'Login successful!' });
+      setTimeout(() => navigate('/dashboard'), 1000);
+    } catch (error) {
+      setAlert({ 
+        type: 'error', 
+        message: error.response?.data?.error || error.message || 'Failed to login. Please check your credentials.' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 dark:bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            "Sign In"
-                        )}
-                    </button>
-                </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-gray-600 dark:text-gray-400">
-                        Don't have an account?{" "}
-                        <button
-                            onClick={() => navigate("/signup")}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                        >
-                            Create account
-                        </button>
-                    </p>
-                </div>
-            </div>
+  return (
+    <AuthLayout>
+      <Card>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
+          <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>
-    );
+
+        {alert && (
+          <Alert
+            type={alert.type}
+            message={alert.message}
+            onClose={() => setAlert(null)}
+            className="mb-4"
+          />
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative">
+            <FiMail className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+              placeholder="you@example.com"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <div className="relative">
+            <FiLock className="absolute left-3 top-9 text-gray-400" />
+            <Input
+              label="Password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+              placeholder="••••••••"
+              className="pl-10"
+              fullWidth
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm text-gray-700">Remember me</span>
+            </label>
+
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </Button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link
+              to="/signup"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </Card>
+    </AuthLayout>
+  );
 };
 
 export default Login;

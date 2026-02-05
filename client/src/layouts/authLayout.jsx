@@ -1,24 +1,13 @@
-import { useState } from "react";
+import React from 'react';
 
-const authLayout = () => {
-    const [isLoginPage, setisLoginPage] = useState(true);
-    const [isUserAuthenticated, setisUserAuthenticated] = useState(false);
-    
-    return ( 
-        <div className="flex min-h-screen items-center bg-gray-900 px-10">
-              {/* Left Content */}
-              <div className="w-[60%]">
-                <h1 className="text-3xl font-bold text-white">Left Content</h1>
-                <p className="mt-4 text-white">This is the left side content.</p>
-              </div>
-        
-              {/* Right Content */}
-              
-            </div>
-     );
-}
- 
-export default authLayo
-<div>
+const AuthLayout = ({ children }) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-12">
+      <div className="w-full max-w-md">
+        {children}
+      </div>
+    </div>
+  );
+};
 
-</div>ut;
+export default AuthLayout;
