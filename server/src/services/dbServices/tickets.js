@@ -6,9 +6,9 @@ async function fetchRegistration(userId, eventId) {
         const collection = db.collection("registrations");
         let result;
         if (!eventId) {  
-            result = collection.findOne({ uid: userId });
+            result = await collection.find({ uid: userId }).toArray();
         }else {
-            result = collection.findOne({ uid: userId, event_id: eventId });
+            result = await collection.findOne({ uid: userId, event_id: eventId });
         }
         console.log(result);
         return result;
@@ -33,7 +33,7 @@ async function addRegistration(registrationDetails) {
 async function deleteRegistration(userId, eventId) {
     try {
         const db = getDB();
-        const collection = db.collection("registration");
+        const collection = db.collection("registrations");
 
         const result = await collection.deleteOne({ uid: userId, event_id: eventId });
         console.log(result);

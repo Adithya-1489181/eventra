@@ -26,7 +26,9 @@ async function deleteEvent(eventId) {
         const db = getDB();
         const collection = db.collection("events");
 
-        const deleteUser = await collection.deleteOne({ event_id: eventId });
+        // Convert to number if string
+        const numericEventId = typeof eventId === 'string' ? parseInt(eventId) : eventId;
+        const deleteUser = await collection.deleteOne({ event_id: numericEventId });
         return deleteUser;
     } catch (error) {
         console.log("Error deleting event:", error);
@@ -38,8 +40,9 @@ async function fetchOneEvent(eventId) {
         db = getDB();
         const collection = db.collection("events");
 
-        // Finding event by eventId
-        const result = collection.findOne({ event_id: eventId });
+        // Finding event by eventId (convert to number if string)
+        const numericEventId = typeof eventId === 'string' ? parseInt(eventId) : eventId;
+        const result = await collection.findOne({ event_id: numericEventId });
         return result;
     } catch (error) {
         console.log("Error fetching event:", error);

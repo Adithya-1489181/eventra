@@ -2,6 +2,9 @@
 const express = require("express");
 const cors = require("cors");
 
+//initialize Firebase Admin
+require("./config/firebase");
+
 //service imports
 const {fetchUser, addUser, updateUser, deleteUser, promoteUser, fetchAllUser} = require("./services/dbServices/users.js");
 const {createEvent, fetchOneEvent, fetchMultipleEvent, updateEvent, deleteEvent} = require("./services/dbServices/events.js");
@@ -78,7 +81,7 @@ try {
         const userCredentials = req.body;
         const email = userCredentials.email;
         const result = fetchUser(email);
-        return result;
+        res.json({message:"SignUp Successfull", data: result})
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -88,7 +91,7 @@ app.post("/api/signup",async (req,res) => {
     try {
         const userCredentials = req.body;
         const result = await addUser(userCredentials);
-        return result;
+        res.json({message:"SignUp Successfull", data: result})
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -109,7 +112,7 @@ app.get("/api/events/:eventId",async (req,res) => {
     try {
         const eventId = req.params.eventId;
         const eventDetails = await fetchOneEvent(eventId);
-        return eventDetails;
+        res.json(eventDetails);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -121,7 +124,7 @@ app.get("/api/profile",verifyToken,async (req,res) => {
     try {
         const userId = req.user.uid; 
         
-        const result = await fetchUser(uid);
+        const result = await fetchUser(userId);
         res.json({ data: result });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -157,8 +160,27 @@ app.get("/api/profile/tickets",verifyToken,async (req,res) => {
     try {
         const userId = req.user.uid;
 
-        const result = await fetchRegistration(userId, null);
-        res.json({message:"All tickets fetched",data: result})
+        const registrations = await fetchRegistration(userId, null);
+        
+        // Enrich registrations with event details
+        if (registrations && registrations.length > 0) {
+            const enrichedTickets = await Promise.all(
+                registrations.map(async (reg) => {
+                    const event = await fetchOneEvent(reg.event_id);
+                    return {
+                        _id: reg._id,
+                        uid: reg.uid,
+                        event_id: reg.event_id,
+                        registration_date: reg.registration_date,
+                        event_name: event?.event_name || 'Unknown Event',
+                        location: event?.location?.venue || event?.location?.type || 'TBD',
+                    };
+                })
+            );
+            res.json({message:"All tickets fetched", data: enrichedTickets});
+        } else {
+            res.json({message:"No tickets found", data: []});
+        }
     } catch (error) {
         res.status(500).json({error: error.message});
     }
@@ -171,15 +193,15 @@ app.post("/api/createEvent",verifyToken, async (req,res) => {
         const eventDetails = req.body.eventdetails;
         const userId = req.user.uid;
 
-        eventDetails.createdBy = userId
+        eventDetails.createdBy = userId;
         const user = await fetchUser(userId);
-        const result = {};
+        
         if (user.role==='organiser'||user.role==='admin') {
-            result = await createEvent(eventDetails);
+            const result = await createEvent(eventDetails);
+            res.json({ message: "Event created successfully", data: result });
         }else{
-            throw new Error("User cannot create event");
+            return res.status(403).json({ error: "User cannot create event" });
         }
-        return result;
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -201,8 +223,10 @@ app.patch("/api/events/:eventId", verifyToken, async (req,res) => {
             });
         }
 
-        const result = await updateEvent(eventId, eventDetails);
-        return result;
+        // Add event_id to eventDetails for updateEvent
+        eventDetails.event_id = parseInt(eventId);
+        const result = await updateEvent(eventDetails);
+        res.json({ message: "Event updated successfully", data: result });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -213,6 +237,7 @@ app.delete("/api/events/:eventId", verifyToken, async (req,res) => {
         const eventId = req.params.eventId;
         const userId = req.user.uid;
         
+        const user = await fetchUser(userId);
         const existingEvent = await fetchOneEvent(eventId);
         
         if (existingEvent.createdBy !== userId && user.role !== "admin") {
@@ -233,39 +258,137 @@ app.delete("/api/events/:eventId", verifyToken, async (req,res) => {
 //Authenticated users event related endpoints
 app.post("/api/events/:eventId/register", verifyToken, async (req,res) => {
     try {
+        const eventId = parseInt(req.params.eventId);
+        const userId = req.user.uid;
+
+        console.log(`Registration attempt - User: ${userId}, Event: ${eventId}`);
+
+        // Check if event exists
+        const event = await fetchOneEvent(eventId);
+        if (!event) {
+            console.log(`Event ${eventId} not found`);
+            return res.status(404).json({ error: "Event not found" });
+        }
+
+        // Check if already registered
+        const existingRegistration = await fetchRegistration(userId, eventId);
+        if (existingRegistration) {
+            console.log(`User ${userId} already registered for event ${eventId}`);
+            return res.status(400).json({ error: "Already registered for this event" });
+        }
+
+        // Check if seats available
+        const seatsLeft = parseInt(event.seats_left);
+        if (seatsLeft <= 0) {
+            return res.status(400).json({ message: 'Event is full' });
+        }
+
+        // Fetch user details
+        const user = await fetchUser(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        console.log('Creating registration for user:', user.email);
+
+        // Create registration record
+        const registrationDetails = {
+            uid: userId,
+            event_id: eventId,
+            registration_date: new Date().toISOString()
+        };
+
+        const registrationResult = await addRegistration(registrationDetails);
+        console.log('Registration created:', registrationResult);
+
+        // Update seats left
+        const updatedSeatsLeft = seatsLeft - 1;
+        await updateEvent({
+            event_id: eventId,
+            seats_left: updatedSeatsLeft
+        });
+
+        // Prepare ticket data for email
+        const ticketData = {
+            eventName: event.event_name,
+            date: event.duration?.start_date || 'TBD',
+            venue: event.location?.venue || event.location?.type || 'Online',
+            ticketId: registrationResult.insertedId.toString(),
+            holderName: user.name || user.email
+        };
+
+        // Generate PDF ticket
+        const pdfBuffer = await generateTicket(ticketData);
+        
+        // Send ticket via email
+        await sendTicket(user.email, pdfBuffer, {
+            eventname: event.event_name,
+            username: user.name || user.email
+        });
+
+        console.log('Seats updated. Remaining:', updatedSeatsLeft);
+        console.log('Ticket email sent successfully');
+
+        res.json({
+            success: true,
+            message: 'Registration successful! Ticket sent to your email.',
+            registrationId: registrationResult.insertedId
+        });
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            message: 'Registration failed', 
+            error: error.message 
+        });
     }
 });
 
-app.post("/:eventId/ticket",verifyToken, async (req,res) => {
- try {
-        const eventId = req.params.eventId;
+app.post("/api/events/:eventId/generate-ticket",verifyToken, async (req,res) => {
+    try {
+        const eventId = parseInt(req.params.eventId);
         const userId = req.user.uid;
-        const userData = await fetchUser(userId);
-        const eventData = await fetchOneEvent(eventId);
-        const ticketData = await fetchRegistration(userId, eventId);
+        
+        // Fetch user, event, and registration data
+        const user = await fetchUser(userId);
+        const event = await fetchOneEvent(eventId);
+        const registration = await fetchRegistration(userId, eventId);
 
-        ticketData = {ticketData,userData,eventData};
-        //Verify the registration using uid
+        if (!registration) {
+            return res.status(404).json({ 
+                status: "error", 
+                message: "No registration found for this event" 
+            });
+        }
 
-        const pdfBuffer = await generateTicket(ticketData);
-        const ticketDetails = {
-            eventname: ticketData.eventName,
-            username: ticketData.holderName
+        // Prepare ticket data
+        const ticketData = {
+            eventName: event.event_name,
+            date: event.duration?.start_date || 'TBD',
+            venue: event.location?.venue || event.location?.type || 'Online',
+            ticketId: registration._id?.toString() || 'N/A',
+            holderName: user.name || user.email
         };
 
-        await sendTicket(
-            ticketData.email, 
-            pdfBuffer, 
-            ticketDetails
-        );
+        // Generate PDF ticket
+        const pdfBuffer = await generateTicket(ticketData);
         
-        res.json({ status: "success", message: "Ticket sent successfully" });
+        // Send ticket via email
+        await sendTicket(user.email, pdfBuffer, {
+            eventname: event.event_name,
+            username: user.name || user.email
+        });
+        
+        res.json({ 
+            status: "success", 
+            message: "Ticket sent to mail, please check" 
+        });
     } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ status: "error", message: error.message });
+        console.error("Error generating ticket:", error);
+        res.status(500).json({ 
+            status: "error", 
+            message: "Failed to generate ticket" 
+        });
     }
 });
 
